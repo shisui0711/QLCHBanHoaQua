@@ -1,4 +1,4 @@
-﻿using System;
+﻿using System.Text;
 
 namespace Framework
 {
@@ -6,7 +6,7 @@ namespace Framework
     {
         public static void PrintSuccess(string message)
         {
-            Start:
+        Start:
             try
             {
                 Console.ForegroundColor = ConsoleColor.Green;
@@ -30,7 +30,7 @@ namespace Framework
         }
         public static void PrintError(string message)
         {
-            Start:
+        Start:
             try
             {
                 Console.ForegroundColor = ConsoleColor.Red;
@@ -54,7 +54,7 @@ namespace Framework
         }
         public static void PrintWarning(string message)
         {
-            Start:
+        Start:
             try
             {
                 Console.ForegroundColor = ConsoleColor.Yellow;
@@ -101,7 +101,7 @@ namespace Framework
         }
         public static T Input<T>(string message, int width = 35)
         {
-            Start:
+        Start:
             try
             {
                 Console.ForegroundColor = ConsoleColor.Green;
@@ -126,7 +126,7 @@ namespace Framework
                 if (temp == "Exit" || temp == "exit")
                 {
                     Console.CursorVisible = false;
-                    throw new ExitException(); 
+                    throw new ExitException();
                 }
                 try
                 {
@@ -161,7 +161,114 @@ namespace Framework
                 Console.BufferWidth += 3;
                 goto Start;
             }
-            
+
+        }
+        public static (int Left, int Top) PrintInput(string message, int width = 35)
+        {
+        Start:
+            try
+            {
+                Console.Write($"╔{string.Concat(Enumerable.Repeat("═", message.Length + 5))}╦");
+                var height = Console.GetCursorPosition();
+                Console.Write($"{string.Concat(Enumerable.Repeat("═", width))}╗");
+                var height2 = Console.GetCursorPosition();
+                Console.WriteLine();
+                Console.Write($"║  {message}");
+                Console.SetCursorPosition(height.Left - 1, height.Top + 1);
+                Console.Write("║ ");
+                var pos_input = Console.GetCursorPosition();
+                Console.SetCursorPosition(height2.Left - 1, height2.Top + 1);
+                Console.WriteLine("║");
+                Console.Write($"╚{string.Concat(Enumerable.Repeat("═", message.Length + 5))}╩");
+                Console.WriteLine($"{string.Concat(Enumerable.Repeat("═", width))}╝");
+                return pos_input;
+            }
+            catch (ArgumentOutOfRangeException)
+            {
+                ClearWhenOverFlow();
+                Console.BufferHeight += 3;
+                Console.BufferWidth += 3;
+                goto Start;
+            }
+        }
+        public static string ReadLine(bool mask = false)
+        {
+            StringBuilder stringBuilder = new StringBuilder(string.Empty);
+            Console.CursorVisible = true;
+            if (mask == false)
+            {
+                while (true)
+                {
+                    var keyInfo = Console.ReadKey(true);
+                    if (keyInfo.Key == ConsoleKey.Backspace)
+                    {
+                        try
+                        {
+                            stringBuilder.Remove(stringBuilder.Length - 1, 1);
+                            Console.Write("\b");
+                            Console.Write(" ");
+                            Console.Write("\b");
+                        }
+                        catch (Exception)
+                        {
+
+                        }
+
+                    }
+                    else if (keyInfo.Key == ConsoleKey.Enter)
+                    {
+                        Console.CursorVisible = false;
+                        return stringBuilder.ToString();
+                    }
+                    else if (keyInfo.Key == ConsoleKey.Escape)
+                    {
+                        Console.CursorVisible = false;
+                        throw new ExitException();
+                    }
+                    else
+                    {
+                        Console.Write(keyInfo.KeyChar);
+                        stringBuilder.Append(keyInfo.KeyChar);
+                    }
+                }
+            }
+            else
+            {
+                while (true)
+                {
+                    var keyInfo = Console.ReadKey(true);
+                    if (keyInfo.Key == ConsoleKey.Backspace)
+                    {
+                        try
+                        {
+                            stringBuilder.Remove(stringBuilder.Length - 1, 1);
+                            Console.Write("\b");
+                            Console.Write(" ");
+                            Console.Write("\b");
+                        }
+                        catch (ArgumentOutOfRangeException)
+                        {
+
+                        }
+
+                    }
+                    else if (keyInfo.Key == ConsoleKey.Enter)
+                    {
+                        Console.CursorVisible = false;
+                        return stringBuilder.ToString();
+                    }
+                    else if (keyInfo.Key == ConsoleKey.Escape)
+                    {
+                        Console.CursorVisible = false;
+                        throw new ExitException();
+                    }
+                    else
+                    {
+                        Console.Write('*');
+                        stringBuilder.Append(keyInfo.KeyChar);
+                    }
+                }
+            }
         }
     }
 }

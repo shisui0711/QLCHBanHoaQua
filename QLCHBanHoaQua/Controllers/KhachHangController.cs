@@ -1,12 +1,5 @@
 ﻿using Framework;
 using QLCHBanHoaQua.Models;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.Serialization.Formatters.Binary;
-using System.Security.Principal;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace QLCHBanHoaQua.Controllers
 {
@@ -42,6 +35,7 @@ namespace QLCHBanHoaQua.Controllers
                     {
                         Console.Clear();
                         ViewHelper.PrintError("Dữ liệu trong file sai định dạng.");
+                        Thread.Sleep(4000);
                         Environment.Exit(0);
                     }
 
@@ -76,7 +70,7 @@ namespace QLCHBanHoaQua.Controllers
 
                 return false;
             }
-            
+
             return false;
         }
         public KhachHang FindKH(string MaKH)
@@ -85,7 +79,7 @@ namespace QLCHBanHoaQua.Controllers
         }
         public List<KhachHang> FindByName(string name)
         {
-            if(name.Trim().Count(x=>x==' ') == 0)
+            if (name.Trim().Count(x => x == ' ') == 0)
             {
                 return khachHangs.FindAll(x => Format.SplitLastName(x.TenKH).ToLower() == name.ToLower());
             }
@@ -96,12 +90,12 @@ namespace QLCHBanHoaQua.Controllers
         }
         public List<KhachHang> FindByAddress(string address)
         {
-            return khachHangs.FindAll(x => x.DiaChi.ToLower().Contains(address.ToLower()));
+            return khachHangs.FindAll(x => x.DiaChi.ToLower().Equals(address.ToLower()));
         }
         public void ShowKH(List<KhachHang> khachHangs)
         {
             Console.Clear();
-            if(khachHangs != null && khachHangs.Count > 0)
+            if (khachHangs != null && khachHangs.Count > 0)
             {
                 Console.WriteLine("╔══════════╦════════════════════╦══════════════════════════════╦═══════════════╗");
                 Console.WriteLine($"║{"Mã KH",-10}║{"Tên KH",-20}║{"Địa chỉ",-30}║{"Số điện thoại",-15}║");
@@ -165,33 +159,52 @@ namespace QLCHBanHoaQua.Controllers
 
         public void ThemKH()
         {
+            Console.Clear();
+            ViewHelper.PrintWarning("Thêm khách hàng");
+            ViewHelper.PrintWarning("Bấm ESC để quay lại");
             KhachHang khachHang = new KhachHang();
-            
+
             try
             {
+                var pos_makh = ViewHelper.PrintInput("Nhập Mã Khách Hàng");
+                var pos_tenkh = ViewHelper.PrintInput("Nhập Tên Khách Hàng");
+                var pos_dichi = ViewHelper.PrintInput("Nhập Địa Chỉ Khách Hàng");
+                var pos_phone = ViewHelper.PrintInput("Nhập SĐT Khách Hàng");
+                var pos_end = Console.GetCursorPosition();
             MaKH:
-                khachHang.MaKH = ViewHelper.Input<string>("Nhập Mã Khách Hàng");
+                Console.SetCursorPosition(pos_makh.Left, pos_makh.Top);
+                khachHang.MaKH = ViewHelper.ReadLine();
                 if (Exist(khachHang.MaKH))
                 {
+                    Console.SetCursorPosition(pos_end.Left, pos_end.Top);
                     ViewHelper.PrintError("Mã khách hàng đã tồn tại");
                     Thread.Sleep(1000);
-                    ViewHelper.ClearPreviousLine(6);
+                    ViewHelper.ClearPreviousLine(3);
+                    Console.SetCursorPosition(pos_makh.Left, pos_makh.Top);
+                    Console.Write(string.Concat(Enumerable.Repeat(" ", khachHang.MaKH.Length)));
                     goto MaKH;
                 }
                 else if (khachHang.MaKH == "")
                 {
+                    Console.SetCursorPosition(pos_end.Left, pos_end.Top);
                     ViewHelper.PrintError("Mã khách hàng không được để trống");
                     Thread.Sleep(1000);
-                    ViewHelper.ClearPreviousLine(6);
+                    ViewHelper.ClearPreviousLine(3);
+                    Console.SetCursorPosition(pos_makh.Left, pos_makh.Top);
+                    Console.Write(string.Concat(Enumerable.Repeat(" ", khachHang.MaKH.Length)));
                     goto MaKH;
                 }
             TenKH:
-                string tenKH = ViewHelper.Input<string>("Nhập Tên Khách Hàng");
+                Console.SetCursorPosition(pos_tenkh.Left, pos_tenkh.Top);
+                string tenKH = ViewHelper.ReadLine();
                 if (tenKH == "")
                 {
+                    Console.SetCursorPosition(pos_end.Left, pos_end.Top);
                     ViewHelper.PrintError("Tên khách hàng không được để trống");
                     Thread.Sleep(1000);
-                    ViewHelper.ClearPreviousLine(6);
+                    ViewHelper.ClearPreviousLine(3);
+                    Console.SetCursorPosition(pos_makh.Left, pos_makh.Top);
+                    Console.Write(string.Concat(Enumerable.Repeat(" ", tenKH.Length)));
                     goto TenKH;
                 }
                 else
@@ -199,25 +212,34 @@ namespace QLCHBanHoaQua.Controllers
                     khachHang.TenKH = Format.Name(tenKH);
                 }
             DiaChi:
-                khachHang.DiaChi = ViewHelper.Input<string>("Nhập Địa Chỉ Khách Hàng");
+                Console.SetCursorPosition(pos_dichi.Left, pos_dichi.Top);
+                khachHang.DiaChi = ViewHelper.ReadLine();
                 if (khachHang.DiaChi == "")
                 {
+                    Console.SetCursorPosition(pos_end.Left, pos_end.Top);
                     ViewHelper.PrintError("Địa chỉ không được để trống");
                     Thread.Sleep(1000);
-                    ViewHelper.ClearPreviousLine(6);
+                    ViewHelper.ClearPreviousLine(3);
+                    Console.SetCursorPosition(pos_dichi.Left, pos_dichi.Top);
+                    Console.Write(string.Concat(Enumerable.Repeat(" ", khachHang.DiaChi.Length)));
                     goto DiaChi;
                 }
             Phone:
-                khachHang.Phone = ViewHelper.Input<string>("Nhập SĐT Khách Hàng");
+                Console.SetCursorPosition(pos_phone.Left, pos_phone.Top);
+                khachHang.Phone = ViewHelper.ReadLine();
                 if (!Validate.Phone(khachHang.Phone))
                 {
+                    Console.SetCursorPosition(pos_end.Left, pos_end.Top);
                     ViewHelper.PrintError("SĐT không hợp lệ. Vui lòng nhập lại");
                     Thread.Sleep(1000);
-                    ViewHelper.ClearPreviousLine(6);
+                    ViewHelper.ClearPreviousLine(3);
+                    Console.SetCursorPosition(pos_phone.Left, pos_phone.Top);
+                    Console.Write(string.Concat(Enumerable.Repeat(" ", khachHang.Phone.Length)));
                     goto Phone;
                 }
                 khachHangs.Add(khachHang);
                 Save(khachHang);
+                Console.SetCursorPosition(pos_end.Left, pos_end.Top);
                 ViewHelper.PrintSuccess("Thêm khách hàng thành công");
                 ViewHelper.PrintWarning("Bấm phím bất kỳ để trờ về menu");
                 Console.ReadKey(true);
@@ -226,68 +248,132 @@ namespace QLCHBanHoaQua.Controllers
             {
                 return;
             }
-            
+
         }
-        public void SuaKH(string maKH)
+        public void SuaKH()
         {
-            var khachHang = FindKH(maKH);
-            if (khachHang != null)
+            Console.Clear();
+            ViewHelper.PrintWarning("Cập nhật thông tin khách hàng");
+            ViewHelper.PrintWarning("Bấm ESC để quay lại");
+            ViewHelper.PrintWarning("Bỏ trống nếu không muốn cập nhật");
+            try
+            {
+                var pos_makh = ViewHelper.PrintInput("Nhập Mã Khách Hàng");
+                var pos_tenkh = ViewHelper.PrintInput("Nhập Tên Khách Hàng");
+                var pos_dichi = ViewHelper.PrintInput("Nhập Địa Chỉ Khách Hàng");
+                var pos_phone = ViewHelper.PrintInput("Nhập SĐT Khách Hàng");
+                var pos_end = Console.GetCursorPosition();
+            MaKH:
+                Console.SetCursorPosition(pos_makh.Left, pos_makh.Top);
+                string maKH = ViewHelper.ReadLine();
+                if (!Exist(maKH))
+                {
+                    Console.SetCursorPosition(pos_end.Left, pos_end.Top);
+                    ViewHelper.PrintError("Mã khách hàng không tồn tại");
+                    Thread.Sleep(1000);
+                    ViewHelper.ClearPreviousLine(3);
+                    Console.SetCursorPosition(pos_makh.Left, pos_makh.Top);
+                    Console.Write(string.Concat(Enumerable.Repeat(" ", maKH.Length)));
+                    goto MaKH;
+                }
+                var khachHang = FindKH(maKH);
+                Console.SetCursorPosition(pos_tenkh.Left, pos_tenkh.Top);
+                string tenKH = ViewHelper.ReadLine();
+                if (tenKH != "")
+                {
+                    khachHang.TenKH = Format.Name(tenKH);
+                }
+                Console.SetCursorPosition(pos_dichi.Left, pos_dichi.Top);
+                string diaChi = ViewHelper.ReadLine();
+                if (diaChi != "")
+                {
+                    khachHang.DiaChi = diaChi;
+                }
+            Phone:
+                Console.SetCursorPosition(pos_phone.Left, pos_phone.Top);
+                string phone = ViewHelper.ReadLine();
+                if (phone != "")
+                {
+                    if (!Validate.Phone(phone))
+                    {
+                        Console.SetCursorPosition(pos_end.Left, pos_end.Top);
+                        ViewHelper.PrintError("SĐT không hợp lệ. Vui lòng nhập lại");
+                        Thread.Sleep(1000);
+                        ViewHelper.ClearPreviousLine(3);
+                        Console.SetCursorPosition(pos_phone.Left, pos_phone.Top);
+                        Console.Write(string.Concat(Enumerable.Repeat(" ", phone.Length)));
+                        goto Phone;
+                    }
+                    else
+                    {
+                        khachHang.Phone = phone;
+                    }
+                }
+                Sync(khachHangs);
+                Console.SetCursorPosition(pos_end.Left, pos_end.Top);
+                ViewHelper.PrintSuccess("Cập nhật thông tin thành công");
+                ViewHelper.PrintWarning("Bấm phím bất kỳ để trở về menu");
+                Console.ReadKey(true);
+            }
+            catch (ExitException)
+            {
+                return;
+            }
+
+        }
+        public void XoaKH()
+        {
+
+            try
             {
                 Console.Clear();
-                ViewHelper.PrintWarning($"Cập nhật thông tin cho khách hàng {maKH}");
-                ViewHelper.PrintWarning("Bỏ trống nếu không muốn cập nhật");
-                try
+                ViewHelper.PrintWarning("Xóa khách hàng");
+                ViewHelper.PrintWarning("Bấm ESC để quay lại");
+                var pos_makh = ViewHelper.PrintInput("Nhập Mã Khách Hàng:");
+                var pos_end = Console.GetCursorPosition();
+
+            MaKH:
+                Console.SetCursorPosition(pos_makh.Left, pos_makh.Top);
+                string maKH = ViewHelper.ReadLine();
+                if (!Exist(maKH))
                 {
-                    string tenKH = ViewHelper.Input<string>("Nhập Tên Khách Hàng");
-                    if(tenKH != "")
-                    {
-                        khachHang.TenKH = Format.Name(tenKH);
-                    }
-                Phone:
-                    string phone = ViewHelper.Input<string>("Nhập SĐT Khách Hàng");
-                    if (phone != "")
-                    {
-                        if (!Validate.Phone(phone))
-                        {
-                            ViewHelper.PrintError("SĐT không hợp lệ. Vui lòng nhập lại");
-                            Thread.Sleep(1000);
-                            ViewHelper.ClearPreviousLine(6);
-                            goto Phone;
-                        }
-                        else
-                        {
-                            khachHang.Phone = phone;
-                        }
-                    }
-                    string diaChi = ViewHelper.Input<string>("Nhập Địa Chỉ Khách Hàng");
-                    if (diaChi != "")
-                    {
-                        khachHang.DiaChi = diaChi;
-                    }
-                    Sync(khachHangs);
+                    Console.SetCursorPosition(pos_end.Left, pos_end.Top);
+                    ViewHelper.PrintError("Mã khách hàng không tồn tại");
+                    Thread.Sleep(1000);
+                    ViewHelper.ClearPreviousLine(3);
+                    Console.SetCursorPosition(pos_makh.Left, pos_makh.Top);
+                    Console.Write(string.Concat(Enumerable.Repeat(" ", maKH.Length)));
+                    goto MaKH;
                 }
-                catch (ExitException)
+                var khachHang = khachHangs.Find(x => x.MaKH == maKH);
+                Console.Clear();
+                ShowKH(khachHang);
+                ViewHelper.PrintWarning("Bạn có chắc chắn muốn xóa khách hàng trên.");
+                ViewHelper.PrintWarning("Bấm Y để xác nhận. Bấm N để hủy.");
+            XacNhan:
+                var xacNhan = Console.ReadKey(true);
+                if (xacNhan.Key == ConsoleKey.Y)
+                {
+                    khachHangs.Remove(khachHang);
+                    Sync(khachHangs);
+                    ViewHelper.PrintSuccess("Xóa thành công");
+                    ViewHelper.PrintWarning("Bấm phím bất kỳ để trở về menu");
+                    Console.ReadKey(true);
+                }
+                else if (xacNhan.Key == ConsoleKey.N)
                 {
                     return;
                 }
-            
+                else
+                {
+                    goto XacNhan;
+                }
+
             }
-            else
+            catch (ExitException)
             {
-                ViewHelper.PrintError($"Không Tồn Tại Khách Hàng Có Mã Khách Hàng là {maKH}");
-                Thread.Sleep(2000);
                 return;
             }
-        }
-        public bool XoaKH(string maKH)
-        {
-            var khachHang = khachHangs.Find(x => x.MaKH == maKH);
-            if(khachHang != null)
-            {
-                khachHangs.Remove(khachHang);
-                return true;
-            }
-            return false;
         }
     }
 }

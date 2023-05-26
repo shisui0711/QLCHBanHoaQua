@@ -1,44 +1,60 @@
-﻿using System;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
+﻿using System.Text;
+using System;
+using Microsoft.Extensions.DependencyInjection;
 namespace QLCHBanHoaQua
 {
+    using Controllers;
     using Framework;
     using Models;
-    using Controllers;
     using Views;
 
     enum Role
     {
         Manager,
-        Staff,
-        Operator
+        Staff
     }
     class Program
     {
         private static Account Session = null;
         private static void Main(string[] args)
         {
+
             #region ConsoleSetting
-            Console.OutputEncoding = Encoding.UTF8;
+            
+            Console.OutputEncoding = Encoding.Unicode;
             Console.InputEncoding = Encoding.Unicode;
+            Console.Title = "Quản lý cửa hàng bán hoa quả";
             Console.CursorVisible = false;
             #endregion
             bool IsIncorrect = false;
-            
+            var services = new ServiceCollection();
+            services.AddSingleton<NCCController>();
+            services.AddSingleton<KhachHangController>();
+            services.AddSingleton<NhanVienController>();
+            services.AddSingleton<SanPhamController>();
+            services.AddSingleton<AuthController>();
+            services.AddSingleton<HoaDonController>((IServiceProvider serviceprovider) => {
+                var sv_khachHang = serviceprovider.GetRequiredService<KhachHangController>();
+                var sv_sanPham = serviceprovider.GetRequiredService<SanPhamController>();
+                var sv_nhanVien = serviceprovider.GetRequiredService<NhanVienController>();
+                var sv_hoaDon = new HoaDonController(sv_khachHang, sv_sanPham, sv_nhanVien, Session);
+                return sv_hoaDon;
+            });
+            services.AddSingleton<ThongKeController>();
+            var provider = services.BuildServiceProvider();
         Login:
-            var khachHangController = new KhachHangController();
-            var nhanVienController = new NhanVienController();
-            var sanPhamController = new SanPhamController();
-            var auth = new AuthController(nhanVienController);
+            var nCCController = provider.GetService<NCCController>();
+            var khachHangController = provider.GetService<KhachHangController>();
+            var nhanVienController = provider.GetService<NhanVienController>();
+            var sanPhamController = provider.GetService<SanPhamController>();
+            var auth = provider.GetRequiredService<AuthController>();
             Session = auth.Login();
-            var hoaDonController = new HoaDonController(khachHangController, sanPhamController, nhanVienController, Session);
-            var thongKeController = new ThongKeController(hoaDonController, sanPhamController, nhanVienController,khachHangController);
+            var hoaDonController = provider.GetService<HoaDonController>();
+            var thongKeController = provider.GetService<ThongKeController>();
             if (Session.VaiTro == Role.Manager)
             {
             ManagerMenu:
+                IsIncorrect = false;
                 Menu.MainMenuForManager();
             ManagerReadKey:
                 ConsoleKeyInfo keyInfo = Console.ReadKey(true);
@@ -54,17 +70,27 @@ namespace QLCHBanHoaQua
                 }
                 else if (keyInfo.Key == ConsoleKey.NumPad3 || keyInfo.Key == ConsoleKey.D3)
                 {
-                    SanPhamFeature(sanPhamController);
+                    NhaCungCapFeature(nCCController);
                     goto ManagerMenu;
                 }
                 else if (keyInfo.Key == ConsoleKey.NumPad4 || keyInfo.Key == ConsoleKey.D4)
                 {
-                    HoaDonFeature(hoaDonController);
+                    SanPhamFeature(sanPhamController);
                     goto ManagerMenu;
                 }
                 else if (keyInfo.Key == ConsoleKey.NumPad5 || keyInfo.Key == ConsoleKey.D5)
                 {
+                    HoaDonFeature(hoaDonController);
+                    goto ManagerMenu;
+                }
+                else if (keyInfo.Key == ConsoleKey.NumPad6 || keyInfo.Key == ConsoleKey.D6)
+                {
                     ThongKeFeature(thongKeController);
+                    goto ManagerMenu;
+                }
+                else if (keyInfo.Key == ConsoleKey.NumPad7 || keyInfo.Key == ConsoleKey.D7)
+                {
+                    QuanLyTaiKhoanFeature(auth);
                     goto ManagerMenu;
                 }
                 else if (keyInfo.Key == ConsoleKey.NumPad0 || keyInfo.Key == ConsoleKey.D0)
@@ -85,9 +111,10 @@ namespace QLCHBanHoaQua
             }
             else if (Session.VaiTro == Role.Staff)
             {
-                StaffMenu:
+            StaffMenu:
+                IsIncorrect = false;
                 Menu.MainMenuForStaff();
-                StaffReadKey:
+            StaffReadKey:
                 ConsoleKeyInfo keyInfo = Console.ReadKey(true);
                 if (keyInfo.Key == ConsoleKey.NumPad1 || keyInfo.Key == ConsoleKey.D1)
                 {
@@ -120,77 +147,9 @@ namespace QLCHBanHoaQua
                     goto StaffReadKey;
                 }
             }
-            else if (Session.VaiTro == Role.Operator)
+            else
             {
-                var operatorController = new OperatorController(auth);
-            OperatorController:
-                Menu.MainMenuForOperator();
-            OperatorReadKey:
-                ConsoleKeyInfo keyInfo = Console.ReadKey(true);
-                if (keyInfo.Key == ConsoleKey.NumPad1 || keyInfo.Key == ConsoleKey.D1)
-                {
-                    operatorController.ShowAllAccount();
-                    ViewHelper.PrintWarning("Bấm phím bất kỳ để trở về menu.");
-                    Console.ReadKey(true);
-                    goto OperatorController;
-                }
-                else if (keyInfo.Key == ConsoleKey.NumPad2 || keyInfo.Key == ConsoleKey.D2)
-                {
-                    operatorController.ShowAccountManager();
-                    ViewHelper.PrintWarning("Bấm phím bất kỳ để trở về menu.");
-                    Console.ReadKey(true);
-                    goto OperatorController;
-                }
-                else if (keyInfo.Key == ConsoleKey.NumPad3 || keyInfo.Key == ConsoleKey.D3)
-                {
-                    operatorController.ShowAccountStaff();
-                    ViewHelper.PrintWarning("Bấm phím bất kỳ để trở về menu.");
-                    Console.ReadKey(true);
-                    goto OperatorController;
-                }
-                else if (keyInfo.Key == ConsoleKey.NumPad4 || keyInfo.Key == ConsoleKey.D4)
-                {
-                    operatorController.CreateAccount(Role.Manager);
-                    ViewHelper.PrintWarning("Bấm phím bất kỳ để trở về menu.");
-                    Console.ReadKey(true);
-                    goto OperatorController;
-                }
-                else if (keyInfo.Key == ConsoleKey.NumPad5 || keyInfo.Key == ConsoleKey.D5)
-                {
-                    operatorController.CreateAccount(Role.Staff);
-                    ViewHelper.PrintWarning("Bấm phím bất kỳ để trở về menu.");
-                    Console.ReadKey(true);
-                    goto OperatorController;
-                }
-                else if (keyInfo.Key == ConsoleKey.NumPad6 || keyInfo.Key == ConsoleKey.D6)
-                {
-                    operatorController.ChangePassword();
-                    ViewHelper.PrintWarning("Bấm phím bất kỳ để trở về menu.");
-                    Console.ReadKey(true);
-                    goto OperatorController;
-                }
-                else if (keyInfo.Key == ConsoleKey.NumPad7 || keyInfo.Key == ConsoleKey.D7)
-                {
-                    operatorController.DeleteAccount();
-                    ViewHelper.PrintWarning("Bấm phím bất kỳ để trở về menu.");
-                    Console.ReadKey(true);
-                    goto OperatorController;
-                }
-                else if (keyInfo.Key == ConsoleKey.NumPad0 || keyInfo.Key == ConsoleKey.D0)
-                {
-                    Session = null;
-                    goto Login;
-                }
-                else
-                {
-                    if (IsIncorrect)
-                    {
-                        ViewHelper.ClearPreviousLine(3);
-                    }
-                    IsIncorrect = true;
-                    ViewHelper.PrintError("Phím bấm không hợp lệ. Có thể bạn đã bấm nhầm");
-                    goto OperatorReadKey;
-                }
+                Environment.Exit(0);
             }
         }
         private static void KhachHangFeature(KhachHangController khachHangController)
@@ -202,85 +161,41 @@ namespace QLCHBanHoaQua
             ConsoleKeyInfo keyInfo = Console.ReadKey(true);
             if (keyInfo.Key == ConsoleKey.NumPad1 || keyInfo.Key == ConsoleKey.D1)
             {
-                Console.Clear();
-                ViewHelper.PrintWarning("Thêm khách hàng");
-                ViewHelper.PrintWarning("Nhập Exit để quay lại");
                 khachHangController.ThemKH();
-
                 goto Menu;
-
             }
             else if (keyInfo.Key == ConsoleKey.NumPad2 || keyInfo.Key == ConsoleKey.D2)
             {
-                Console.Clear();
-                ViewHelper.PrintWarning("Cập nhật thông tin khách hàng");
-                ViewHelper.PrintWarning("Nhập Exit để quay lại");
-            MaKH:
-                try
-                {
-                    string maKH = ViewHelper.Input<string>("Nhập mã khách hàng:");
-                    if (!khachHangController.Exist(maKH))
-                    {
-                        ViewHelper.PrintError("Mã khách hàng không tồn tại");
-                        Thread.Sleep(1000);
-                        ViewHelper.ClearPreviousLine(6);
-                        goto MaKH;
-                    }
-                    khachHangController.SuaKH(maKH);
-                    ViewHelper.PrintSuccess($"Cập nhật thành công khách hàng {maKH}");
-                    ViewHelper.PrintWarning("Bấm phím bất kỳ để trở về menu");
-                    Console.ReadKey(true);
-                    goto Menu;
-                }
-                catch (ExitException)
-                {
-                    goto Menu;
-                }
+
+                khachHangController.SuaKH();
+                goto Menu;
 
             }
             else if (keyInfo.Key == ConsoleKey.NumPad3 || keyInfo.Key == ConsoleKey.D3)
             {
-                Console.Clear();
-                ViewHelper.PrintWarning("Xóa khách hàng");
-                ViewHelper.PrintWarning("Nhập Exit để quay lại");
-                try
-                {
-                MaKH:
-                    string maKH = ViewHelper.Input<string>("Nhập mã khách hàng:");
-                    if (!khachHangController.Exist(maKH))
-                    {
-                        ViewHelper.PrintError("Mã khách hàng không tồn tại");
-                        Thread.Sleep(1000);
-                        ViewHelper.ClearPreviousLine(6);
-                        goto MaKH;
-                    }
-                    if (khachHangController.XoaKH(maKH)) ViewHelper.PrintSuccess("Xóa thành công");
-                    else ViewHelper.PrintError("Xóa thất bại");
-                    ViewHelper.PrintWarning("Bấm phím bất kỳ để trở về menu");
-                    Console.ReadKey(true);
-                    goto Menu;
-                }
-                catch (ExitException)
-                {
-                    goto Menu;
-                }
-
-
+                khachHangController.XoaKH();
+                goto Menu;
             }
             else if (keyInfo.Key == ConsoleKey.NumPad4 || keyInfo.Key == ConsoleKey.D4)
             {
                 Console.Clear();
                 ViewHelper.PrintWarning("Tìm kiếm khách hàng theo mã KH");
-                ViewHelper.PrintWarning("Nhập Exit để quay lại");
+                ViewHelper.PrintWarning("Bấm ESC để quay lại");
                 try
                 {
+                    var pos_makh = ViewHelper.PrintInput("Nhập mã khách hàng");
+                    var pos_end = Console.GetCursorPosition();
                 MaKH:
-                    string maKH = ViewHelper.Input<string>("Nhập mã khách hàng:");
+                    Console.SetCursorPosition(pos_makh.Left, pos_makh.Top);
+                    string maKH = ViewHelper.ReadLine();
                     if (!khachHangController.Exist(maKH))
                     {
+                        Console.SetCursorPosition(pos_end.Left, pos_end.Top);
                         ViewHelper.PrintError("Mã khách hàng không tồn tại");
                         Thread.Sleep(1000);
-                        ViewHelper.ClearPreviousLine(6);
+                        ViewHelper.ClearPreviousLine(3);
+                        Console.SetCursorPosition(pos_makh.Left, pos_makh.Top);
+                        Console.Write(string.Concat(Enumerable.Repeat(" ", maKH.Length)));
                         goto MaKH;
                     }
                     Console.Clear();
@@ -299,16 +214,23 @@ namespace QLCHBanHoaQua
             {
                 Console.Clear();
                 ViewHelper.PrintWarning("Tìm kiếm khách hàng theo tên");
-                ViewHelper.PrintWarning("Nhập Exit để quay lại");
-            TenKH:
+                ViewHelper.PrintWarning("Bấm ESC để quay lại");
+
                 try
                 {
-                    string tenKH = ViewHelper.Input<string>("Nhập tên khách hàng:");
+                    var pos_ten = ViewHelper.PrintInput("Nhập tên khách hàng");
+                    var pos_end = Console.GetCursorPosition();
+                TenKH:
+                    Console.SetCursorPosition(pos_ten.Left, pos_ten.Top);
+                    string tenKH = ViewHelper.ReadLine();
                     if (tenKH == "")
                     {
+                        Console.SetCursorPosition(pos_end.Left, pos_end.Top);
                         ViewHelper.PrintError("Tên không hợp lệ");
                         Thread.Sleep(1000);
-                        ViewHelper.ClearPreviousLine(6);
+                        ViewHelper.ClearPreviousLine(3);
+                        Console.SetCursorPosition(pos_ten.Left, pos_ten.Top);
+                        Console.Write(string.Concat(Enumerable.Repeat(" ", tenKH.Length)));
                         goto TenKH;
                     }
                     Console.Clear();
@@ -321,22 +243,28 @@ namespace QLCHBanHoaQua
                 {
                     goto Menu;
                 }
-                
+
             }
             else if (keyInfo.Key == ConsoleKey.NumPad6 || keyInfo.Key == ConsoleKey.D6)
             {
                 Console.Clear();
                 ViewHelper.PrintWarning("Tìm kiếm khách hàng theo địa chỉ");
-                ViewHelper.PrintWarning("Nhập Exit để quay lại");
+                ViewHelper.PrintWarning("Bấm ESC để quay lại");
                 try
                 {
+                    var pos_diachi = ViewHelper.PrintInput("Nhập địa chỉ khách hàng");
+                    var pos_end = Console.GetCursorPosition();
                 DiaChi:
-                    string diaChi = ViewHelper.Input<string>("Nhập địa chỉ khách hàng:");
+                    Console.SetCursorPosition(pos_diachi.Left, pos_diachi.Top);
+                    string diaChi = ViewHelper.ReadLine();
                     if (diaChi == "")
                     {
+                        Console.SetCursorPosition(pos_end.Left, pos_end.Top);
                         ViewHelper.PrintError("Địa chỉ không hợp lệ");
                         Thread.Sleep(1000);
-                        ViewHelper.ClearPreviousLine(6);
+                        ViewHelper.ClearPreviousLine(3);
+                        Console.SetCursorPosition(pos_diachi.Left, pos_diachi.Top);
+                        Console.Write(string.Concat(Enumerable.Repeat(" ", diaChi.Length)));
                         goto DiaChi;
                     }
                     Console.Clear();
@@ -384,80 +312,41 @@ namespace QLCHBanHoaQua
             ConsoleKeyInfo keyInfo = Console.ReadKey(true);
             if (keyInfo.Key == ConsoleKey.NumPad1 || keyInfo.Key == ConsoleKey.D1)
             {
-                Console.Clear();
-                ViewHelper.PrintWarning("Thêm nhân viên");
-                ViewHelper.PrintWarning("Nhập Exit để quay lại");
+
                 nhanVienController.ThemNV();
                 goto Menu;
             }
             else if (keyInfo.Key == ConsoleKey.NumPad2 || keyInfo.Key == ConsoleKey.D2)
             {
-                Console.Clear();
-                ViewHelper.PrintWarning("Cập nhật thông tin nhân viên");
-                ViewHelper.PrintWarning("Nhập Exit để quay lại");
-            MaNV:
-                try
-                {
-                    string maNV = ViewHelper.Input<string>("Nhập mã nhân viên:");
-                    if (!nhanVienController.Exist(maNV))
-                    {
-                        ViewHelper.PrintError("Mã nhân viên không tồn tại");
-                        Thread.Sleep(1000);
-                        ViewHelper.ClearPreviousLine(6);
-                        goto MaNV;
-                    }
-                    nhanVienController.SuaNV(maNV);
-                    ViewHelper.PrintSuccess($"Cập nhật thành công nhân viên {maNV}");
-                    ViewHelper.PrintWarning("Bấm phím bất kỳ để trở về menu");
-                    Console.ReadKey(true);
-                    goto Menu;
-                }
-                catch (ExitException)
-                {
-                    goto Menu;
-                }
+                nhanVienController.SuaNV();
+                goto Menu;
             }
             else if (keyInfo.Key == ConsoleKey.NumPad3 || keyInfo.Key == ConsoleKey.D3)
             {
-                Console.Clear();
-                ViewHelper.PrintWarning("Xóa nhân viên");
-                ViewHelper.PrintWarning("Nhập Exit để quay lại");
-                try
-                {
-                MaNV:
-                    string maNV = ViewHelper.Input<string>("Nhập mã nhân viên:");
-                    if (!nhanVienController.Exist(maNV))
-                    {
-                        ViewHelper.PrintError("Mã nhân viên không tồn tại");
-                        Thread.Sleep(1000);
-                        ViewHelper.ClearPreviousLine(6);
-                        goto MaNV;
-                    }
-                    if (nhanVienController.XoaNV(maNV)) ViewHelper.PrintSuccess("Xóa thành công");
-                    else ViewHelper.PrintError("Xóa thất bại");
-                    ViewHelper.PrintWarning("Bấm phím bất kỳ để trở về menu");
-                    Console.ReadKey(true);
-                    goto Menu;
-                }
-                catch (ExitException)
-                {
-                    goto Menu;
-                }
+                nhanVienController.XoaNV();
+                goto Menu;
+
             }
             else if (keyInfo.Key == ConsoleKey.NumPad4 || keyInfo.Key == ConsoleKey.D4)
             {
                 Console.Clear();
                 ViewHelper.PrintWarning("Tìm kiếm nhân viên theo mã NV");
-                ViewHelper.PrintWarning("Nhập Exit để quay lại");
+                ViewHelper.PrintWarning("Bấm ESC để quay lại");
                 try
                 {
+                    var pos_manv = ViewHelper.PrintInput("Nhập mã nhân viên");
+                    var pos_end = Console.GetCursorPosition();
                 MaNV:
-                    string maNV = ViewHelper.Input<string>("Nhập mã nhân viên:");
+                    Console.SetCursorPosition(pos_manv.Left, pos_manv.Top);
+                    string maNV = ViewHelper.ReadLine();
                     if (!nhanVienController.Exist(maNV))
                     {
+                        Console.SetCursorPosition(pos_end.Left, pos_end.Top);
                         ViewHelper.PrintError("Mã nhân viên không tồn tại");
                         Thread.Sleep(1000);
-                        ViewHelper.ClearPreviousLine(6);
+                        ViewHelper.ClearPreviousLine(3);
+                        Console.SetCursorPosition(pos_manv.Left, pos_manv.Top);
+                        Console.Write(string.Concat(Enumerable.Repeat(" ", maNV.Length)));
                         goto MaNV;
                     }
                     Console.Clear();
@@ -475,48 +364,77 @@ namespace QLCHBanHoaQua
             {
                 Console.Clear();
                 ViewHelper.PrintWarning("Tìm kiếm nhân viên theo tên");
-                ViewHelper.PrintWarning("Nhập Exit để quay lại");
-            TenNV:
+                ViewHelper.PrintWarning("Bấm ESC để quay lại");
+
                 try
                 {
-                    string tenKH = ViewHelper.Input<string>("Nhập tên nhân viên:");
-                    if (tenKH == "")
+                    var pos_ten = ViewHelper.PrintInput("Nhập tên nhân viên");
+                    var pos_end = Console.GetCursorPosition();
+                TenNV:
+                    Console.SetCursorPosition(pos_ten.Left, pos_ten.Top);
+                    string tenNV = ViewHelper.ReadLine();
+                    if (tenNV == "")
                     {
+                        Console.SetCursorPosition(pos_end.Left, pos_end.Top);
                         ViewHelper.PrintError("Tên không hợp lệ");
                         Thread.Sleep(1000);
-                        ViewHelper.ClearPreviousLine(6);
+                        ViewHelper.ClearPreviousLine(3);
+                        Console.SetCursorPosition(pos_ten.Left, pos_ten.Top);
+                        Console.Write(string.Concat(Enumerable.Repeat(" ", tenNV.Length)));
                         goto TenNV;
                     }
                     Console.Clear();
-                    nhanVienController.ShowNV(nhanVienController.FindByName(tenKH));
+                    var nhanViens = nhanVienController.FindByName(tenNV);
+                    if(nhanViens.Count > 0)
+                    {
+                        nhanVienController.ShowNV(nhanViens);
+                    }
+                    else
+                    {
+                        ViewHelper.PrintError($"Không tìm thầy nhân viên nào tên {tenNV}");
+                    }
                     ViewHelper.PrintWarning("Bấm phím bất kỳ để trở về menu");
                     Console.ReadKey(true);
                     goto Menu;
                 }
-                catch (Exception)
+                catch (ExitException)
                 {
                     goto Menu;
                 }
-                
+
             }
             else if (keyInfo.Key == ConsoleKey.NumPad6 || keyInfo.Key == ConsoleKey.D6)
             {
                 Console.Clear();
                 ViewHelper.PrintWarning("Tìm kiếm khách hàng theo quê quán");
-                ViewHelper.PrintWarning("Nhập Exit để quay lại");
+                ViewHelper.PrintWarning("Bấm ESC để quay lại");
                 try
                 {
+                    var pos_diachi = ViewHelper.PrintInput("Nhập quê quán nhân viên");
+                    var pos_end = Console.GetCursorPosition();
                 DiaChi:
-                    string diaChi = ViewHelper.Input<string>("Nhập quê quán nhân viên:");
+                    Console.SetCursorPosition(pos_diachi.Left, pos_diachi.Top);
+                    string diaChi = ViewHelper.ReadLine();
                     if (diaChi == "")
                     {
+                        Console.SetCursorPosition(pos_end.Left, pos_end.Top);
                         ViewHelper.PrintError("Địa chỉ không hợp lệ");
                         Thread.Sleep(1000);
-                        ViewHelper.ClearPreviousLine(6);
+                        ViewHelper.ClearPreviousLine(3);
+                        Console.SetCursorPosition(pos_diachi.Left, pos_diachi.Top);
+                        Console.Write(string.Concat(Enumerable.Repeat(" ", diaChi.Length)));
                         goto DiaChi;
                     }
                     Console.Clear();
-                    nhanVienController.ShowNV(nhanVienController.FindByAddress(diaChi));
+                    var nhanViens = nhanVienController.FindByAddress(diaChi);
+                    if (nhanViens.Count > 0)
+                    {
+                        nhanVienController.ShowNV(nhanViens);
+                    }
+                    else
+                    {
+                        ViewHelper.PrintError($"Không tìm thầy nhân viên nào có quê quán ở {diaChi}");
+                    }
                     ViewHelper.PrintWarning("Bấm phím bất kỳ để trở về menu");
                     Console.ReadKey(true);
                     goto Menu;
@@ -571,7 +489,7 @@ namespace QLCHBanHoaQua
         private static void SanPhamFeature(SanPhamController sanPhamController)
         {
             bool IsIncorrect = false;
-            if(Session.VaiTro == Role.Manager)
+            if (Session.VaiTro == Role.Manager)
             {
             Menu:
                 Menu.SanPhamMenu();
@@ -579,106 +497,48 @@ namespace QLCHBanHoaQua
                 ConsoleKeyInfo keyInfo = Console.ReadKey(true);
                 if (keyInfo.Key == ConsoleKey.NumPad1 || keyInfo.Key == ConsoleKey.D1)
                 {
-                    Console.Clear();
-                    ViewHelper.PrintWarning("Thêm Loại Hoa Quả");
-                    ViewHelper.PrintWarning("Nhập Exit để quay lại");
                     sanPhamController.ThemSP();
                     goto Menu;
                 }
                 else if (keyInfo.Key == ConsoleKey.NumPad2 || keyInfo.Key == ConsoleKey.D2)
                 {
-                    Console.Clear();
-                    ViewHelper.PrintWarning("Cập nhật thông tin hoa quả");
-                    ViewHelper.PrintWarning("Nhập Exit để quay lại");
-                MaSP:
-                    try
-                    {
-                        string maSP = ViewHelper.Input<string>("Nhập mã hoa quả:");
-                        if (!sanPhamController.Exist(maSP))
-                        {
-                            ViewHelper.PrintError("Mã hoa quả không tồn tại");
-                            Thread.Sleep(1000);
-                            ViewHelper.ClearPreviousLine(6);
-                            goto MaSP;
-                        }
-                        sanPhamController.SuaThongTinSP(maSP);
-                        ViewHelper.PrintSuccess($"Cập nhật thông tin thành công {maSP}");
-                        ViewHelper.PrintWarning("Bấm phím bất kỳ để trở về menu");
-                        Console.ReadKey(true);
-                        goto Menu;
-                    }
-                    catch (ExitException)
-                    {
-                        goto Menu;
-                    }
+                    sanPhamController.SuaThongTinSP();
+                    goto Menu;
                 }
                 else if (keyInfo.Key == ConsoleKey.NumPad3 || keyInfo.Key == ConsoleKey.D3)
                 {
-                    Console.Clear();
-                    ViewHelper.PrintWarning("Cập nhật số lượng hoa quả");
-                    ViewHelper.PrintWarning("Nhập Exit để quay lại");
-                MaSP:
-                    try
-                    {
-                        string maSP = ViewHelper.Input<string>("Nhập mã hoa quả:");
-                        if (!sanPhamController.Exist(maSP))
-                        {
-                            ViewHelper.PrintError("Mã hoa quả không tồn tại");
-                            Thread.Sleep(1000);
-                            ViewHelper.ClearPreviousLine(6);
-                            goto MaSP;
-                        }
-                        sanPhamController.ThemSLSP(maSP);
-                        goto Menu;
-                    }
-                    catch (ExitException)
-                    {
-                        goto Menu;
-                    }
+                    sanPhamController.ThemSLSP();
+                    goto Menu;
                 }
                 else if (keyInfo.Key == ConsoleKey.NumPad4 || keyInfo.Key == ConsoleKey.D4)
                 {
-                    Console.Clear();
-                    ViewHelper.PrintWarning("Xóa hoa quả");
-                    ViewHelper.PrintWarning("Nhập Exit để quay lại");
-                    try
-                    {
-                    MaSP:
-                        string maSP = ViewHelper.Input<string>("Nhập mã hoa quả:");
-                        if (!sanPhamController.Exist(maSP))
-                        {
-                            ViewHelper.PrintError("Mã hoa quả không tồn tại");
-                            Thread.Sleep(1000);
-                            ViewHelper.ClearPreviousLine(6);
-                            goto MaSP;
-                        }
-                        if (sanPhamController.XoaSP(maSP)) ViewHelper.PrintSuccess("Xóa thành công");
-                        else ViewHelper.PrintError("Xóa thất bại");
-                        ViewHelper.PrintWarning("Bấm phím bất kỳ để trở về menu");
-                        Console.ReadKey(true);
-                        goto Menu;
-                    }
-                    catch (ExitException)
-                    {
-                        goto Menu;
-                    }
+
+                    sanPhamController.XoaSP();
+                    goto Menu;
                 }
                 else if (keyInfo.Key == ConsoleKey.NumPad5 || keyInfo.Key == ConsoleKey.D5)
                 {
                     Console.Clear();
                     ViewHelper.PrintWarning("Tìm kiếm hoa quả theo mã");
-                    ViewHelper.PrintWarning("Nhập Exit để quay lại");
+                    ViewHelper.PrintWarning("Bấm ESC để quay lại");
                     try
                     {
+                        var pos_masp = ViewHelper.PrintInput("Nhập mã hoa quả");
+                        var pos_end = Console.GetCursorPosition();
                     MaSP:
-                        string maSP = ViewHelper.Input<string>("Nhập mã hoa quả:");
+                        Console.SetCursorPosition(pos_masp.Left, pos_masp.Top);
+                        string maSP = ViewHelper.ReadLine();
                         if (!sanPhamController.Exist(maSP))
                         {
+                            Console.SetCursorPosition(pos_end.Left, pos_end.Top);
                             ViewHelper.PrintError("Mã hoa quả không tồn tại");
                             Thread.Sleep(1000);
-                            ViewHelper.ClearPreviousLine(6);
+                            ViewHelper.ClearPreviousLine(3);
+                            Console.SetCursorPosition(pos_masp.Left, pos_masp.Top);
+                            Console.Write(string.Concat(Enumerable.Repeat(" ", maSP.Length)));
                             goto MaSP;
                         }
+
                         Console.Clear();
                         sanPhamController.ShowSP(sanPhamController.FindSP(maSP));
                         ViewHelper.PrintWarning("Bấm phím bất kỳ để trở về menu");
@@ -694,16 +554,23 @@ namespace QLCHBanHoaQua
                 {
                     Console.Clear();
                     ViewHelper.PrintWarning("Tìm kiếm hoa quả theo tên");
-                    ViewHelper.PrintWarning("Nhập Exit để quay lại");
-                TenSP:
+                    ViewHelper.PrintWarning("Bấm ESC để quay lại");
+                
                     try
                     {
-                        string tenSP = ViewHelper.Input<string>("Nhập tên hoa quả:");
+                        var pos_ten = ViewHelper.PrintInput("Nhập tên hoa quả");
+                        var pos_end = Console.GetCursorPosition();
+                    TenSP:
+                        Console.SetCursorPosition(pos_ten.Left, pos_ten.Top);
+                        string tenSP = ViewHelper.ReadLine();
                         if (tenSP == "")
                         {
+                            Console.SetCursorPosition(pos_end.Left, pos_end.Top);
                             ViewHelper.PrintError("Tên không hợp lệ");
                             Thread.Sleep(1000);
-                            ViewHelper.ClearPreviousLine(6);
+                            ViewHelper.ClearPreviousLine(3);
+                            Console.SetCursorPosition(pos_ten.Left, pos_ten.Top);
+                            Console.Write(string.Concat(Enumerable.Repeat(" ", tenSP.Length)));
                             goto TenSP;
                         }
                         Console.Clear();
@@ -728,6 +595,14 @@ namespace QLCHBanHoaQua
                 else if (keyInfo.Key == ConsoleKey.NumPad8 || keyInfo.Key == ConsoleKey.D8)
                 {
                     sanPhamController.ShowSP(sanPhamController.ZeroFilter());
+                    ViewHelper.PrintWarning("Bấm phím bất kỳ để trở về menu");
+                    Console.ReadKey(true);
+                    goto Menu;
+                }
+                else if (keyInfo.Key == ConsoleKey.NumPad9 || keyInfo.Key == ConsoleKey.D9)
+                {
+                    Console.Clear();
+                    sanPhamController.ShowLS();
                     ViewHelper.PrintWarning("Bấm phím bất kỳ để trở về menu");
                     Console.ReadKey(true);
                     goto Menu;
@@ -757,18 +632,25 @@ namespace QLCHBanHoaQua
                 {
                     Console.Clear();
                     ViewHelper.PrintWarning("Tìm kiếm hoa quả theo mã");
-                    ViewHelper.PrintWarning("Nhập Exit để quay lại");
+                    ViewHelper.PrintWarning("Bấm ESC để quay lại");
                     try
                     {
+                        var pos_masp = ViewHelper.PrintInput("Nhập mã hoa quả");
+                        var pos_end = Console.GetCursorPosition();
                     MaSP:
-                        string maSP = ViewHelper.Input<string>("Nhập mã hoa quả:");
+                        Console.SetCursorPosition(pos_masp.Left, pos_masp.Top);
+                        string maSP = ViewHelper.ReadLine();
                         if (!sanPhamController.Exist(maSP))
                         {
+                            Console.SetCursorPosition(pos_end.Left, pos_end.Top);
                             ViewHelper.PrintError("Mã hoa quả không tồn tại");
                             Thread.Sleep(1000);
-                            ViewHelper.ClearPreviousLine(6);
+                            ViewHelper.ClearPreviousLine(3);
+                            Console.SetCursorPosition(pos_masp.Left, pos_masp.Top);
+                            Console.Write(string.Concat(Enumerable.Repeat(" ", maSP.Length)));
                             goto MaSP;
                         }
+
                         Console.Clear();
                         sanPhamController.ShowSP(sanPhamController.FindSP(maSP));
                         ViewHelper.PrintWarning("Bấm phím bất kỳ để trở về menu");
@@ -784,16 +666,23 @@ namespace QLCHBanHoaQua
                 {
                     Console.Clear();
                     ViewHelper.PrintWarning("Tìm kiếm hoa quả theo tên");
-                    ViewHelper.PrintWarning("Nhập Exit để quay lại");
-                TenSP:
+                    ViewHelper.PrintWarning("Bấm ESC để quay lại");
+
                     try
                     {
-                        string tenSP = ViewHelper.Input<string>("Nhập tên hoa quả:");
+                        var pos_ten = ViewHelper.PrintInput("Nhập tên hoa quả");
+                        var pos_end = Console.GetCursorPosition();
+                    TenSP:
+                        Console.SetCursorPosition(pos_ten.Left, pos_ten.Top);
+                        string tenSP = ViewHelper.ReadLine();
                         if (tenSP == "")
                         {
+                            Console.SetCursorPosition(pos_end.Left, pos_end.Top);
                             ViewHelper.PrintError("Tên không hợp lệ");
                             Thread.Sleep(1000);
-                            ViewHelper.ClearPreviousLine(6);
+                            ViewHelper.ClearPreviousLine(3);
+                            Console.SetCursorPosition(pos_ten.Left, pos_ten.Top);
+                            Console.Write(string.Concat(Enumerable.Repeat(" ", tenSP.Length)));
                             goto TenSP;
                         }
                         Console.Clear();
@@ -837,7 +726,7 @@ namespace QLCHBanHoaQua
                     goto ReadKey;
                 }
             }
-        
+
         }
         private static void HoaDonFeature(HoaDonController hoaDonController)
         {
@@ -848,53 +737,35 @@ namespace QLCHBanHoaQua
             ConsoleKeyInfo keyInfo = Console.ReadKey(true);
             if (keyInfo.Key == ConsoleKey.NumPad1 || keyInfo.Key == ConsoleKey.D1)
             {
-                Console.Clear();
-                ViewHelper.PrintWarning("Ghi hóa đơn");
-                ViewHelper.PrintWarning("Nhập Exit để quay lại");
+                
                 hoaDonController.GhiHD();
                 goto Menu;
             }
             else if (keyInfo.Key == ConsoleKey.NumPad2 || keyInfo.Key == ConsoleKey.D2)
             {
-                Console.Clear();
-                ViewHelper.PrintWarning("Xóa hóa đơn và khôi phục số lượng hoa quả");
-                ViewHelper.PrintWarning("Nhập Exit để quay lại");
-                try
-                {
-                MaHD:
-                    string maHD = ViewHelper.Input<string>("Nhập mã hóa đơn:");
-                    if (!hoaDonController.Exist(maHD))
-                    {
-                        ViewHelper.PrintError("Mã hóa đơn không tồn tại");
-                        Thread.Sleep(1000);
-                        ViewHelper.ClearPreviousLine(6);
-                        goto MaHD;
-                    }
-                    if (hoaDonController.XoaHD(maHD)) ViewHelper.PrintSuccess("Xóa thành công");
-                    else ViewHelper.PrintError("Xóa thất bại");
-                    ViewHelper.PrintWarning("Bấm phím bất kỳ để trở về menu");
-                    Console.ReadKey(true);
-                    goto Menu;
-                }
-                catch (ExitException)
-                {
-                    goto Menu;
-                }
+                hoaDonController.XoaHD();
+                goto Menu;
             }
             else if (keyInfo.Key == ConsoleKey.NumPad3 || keyInfo.Key == ConsoleKey.D3)
             {
                 Console.Clear();
                 ViewHelper.PrintWarning("Tìm kiếm hóa đơn theo mã hóa đơn");
-                ViewHelper.PrintWarning("Nhập Exit để quay lại");
+                ViewHelper.PrintWarning("Bấm ESC để quay lại");
                 try
                 {
+                    var pos_mahd = ViewHelper.PrintInput("Nhập mã hóa đơn");
+                    var pos_end = Console.GetCursorPosition();
                 MaHD:
-                    string maHD = ViewHelper.Input<string>("Nhập mã hóa đơn:");
+                    Console.SetCursorPosition(pos_mahd.Left, pos_mahd.Top);
+                    string maHD = ViewHelper.ReadLine();
                     if (!hoaDonController.Exist(maHD))
                     {
+                        Console.SetCursorPosition(pos_end.Left, pos_end.Top);
                         ViewHelper.PrintError("Mã hóa đơn không tồn tại");
                         Thread.Sleep(1000);
-                        ViewHelper.ClearPreviousLine(6);
+                        ViewHelper.ClearPreviousLine(3);
+                        Console.SetCursorPosition(pos_mahd.Left, pos_mahd.Top);
+                        Console.Write(string.Concat(Enumerable.Repeat(" ", maHD.Length)));
                         goto MaHD;
                     }
                     Console.Clear();
@@ -912,16 +783,22 @@ namespace QLCHBanHoaQua
             {
                 Console.Clear();
                 ViewHelper.PrintWarning("Tìm kiếm hóa đơn theo mã hoa quả");
-                ViewHelper.PrintWarning("Nhập Exit để quay lại");
+                ViewHelper.PrintWarning("Bấm ESC để quay lại");
                 try
                 {
+                    var pos_masp = ViewHelper.PrintInput("Nhập mã hoa quả");
+                    var pos_end = Console.GetCursorPosition();
                 MaSP:
-                    string maSP = ViewHelper.Input<string>("Nhập mã hoa quả:");
+                    Console.SetCursorPosition(pos_masp.Left, pos_masp.Top);
+                    string maSP = ViewHelper.ReadLine();
                     if (!hoaDonController.sanPhamController.Exist(maSP))
                     {
+                        Console.SetCursorPosition(pos_end.Left, pos_end.Top);
                         ViewHelper.PrintError("Mã hoa quả không tồn tại");
                         Thread.Sleep(1000);
-                        ViewHelper.ClearPreviousLine(6);
+                        ViewHelper.ClearPreviousLine(3);
+                        Console.SetCursorPosition(pos_masp.Left, pos_masp.Top);
+                        Console.Write(string.Concat(Enumerable.Repeat(" ", maSP.Length)));
                         goto MaSP;
                     }
                     Console.Clear();
@@ -939,20 +816,26 @@ namespace QLCHBanHoaQua
             {
                 Console.Clear();
                 ViewHelper.PrintWarning("Tìm kiếm hóa đơn theo mã khách hàng");
-                ViewHelper.PrintWarning("Nhập Exit để quay lại");
+                ViewHelper.PrintWarning("Bấm ESC để quay lại");
                 try
                 {
+                    var pos_makh = ViewHelper.PrintInput("Nhập mã khách hàng");
+                    var pos_end = Console.GetCursorPosition();
                 MaKH:
-                    string maKH = ViewHelper.Input<string>("Nhập mã khách hàng:");
+                    Console.SetCursorPosition(pos_makh.Left, pos_makh.Top);
+                    string maKH = ViewHelper.ReadLine();
                     if (!hoaDonController.khachHangController.Exist(maKH))
                     {
+                        Console.SetCursorPosition(pos_end.Left, pos_end.Top);
                         ViewHelper.PrintError("Mã khách hàng không tồn tại");
                         Thread.Sleep(1000);
-                        ViewHelper.ClearPreviousLine(6);
+                        ViewHelper.ClearPreviousLine(3);
+                        Console.SetCursorPosition(pos_makh.Left, pos_makh.Top);
+                        Console.Write(string.Concat(Enumerable.Repeat(" ", maKH.Length)));
                         goto MaKH;
                     }
                     Console.Clear();
-                    hoaDonController.ShowHD(hoaDonController.FindByMaSP(maKH));
+                    hoaDonController.ShowHD(hoaDonController.FindByMaKH(maKH));
                     ViewHelper.PrintWarning("Bấm phím bất kỳ để trở về menu");
                     Console.ReadKey(true);
                     goto Menu;
@@ -1014,6 +897,162 @@ namespace QLCHBanHoaQua
                 Console.Clear();
                 thongKeController.ThongKeNhanVien();
                 goto Menu;
+            }
+            else if (keyInfo.Key == ConsoleKey.Escape)
+            {
+                return;
+            }
+            else
+            {
+                if (IsIncorrect)
+                {
+                    ViewHelper.ClearPreviousLine(3);
+                }
+                IsIncorrect = true;
+                ViewHelper.PrintError("Phím bấm không hợp lệ. Có thể bạn đã bấm nhầm");
+                goto ReadKey;
+            }
+        }
+        private static void QuanLyTaiKhoanFeature(AuthController authController)
+        {
+            bool IsIncorrect = false;
+        Menu:
+            Menu.MenuQuanTri();
+        ReadKey:
+            ConsoleKeyInfo keyInfo = Console.ReadKey(true);
+            if (keyInfo.Key == ConsoleKey.NumPad1 || keyInfo.Key == ConsoleKey.D1)
+            {
+                authController.ShowAccountStaff();
+                goto Menu;
+            }
+            else if (keyInfo.Key == ConsoleKey.NumPad2 || keyInfo.Key == ConsoleKey.D2)
+            {
+                authController.Register(Role.Staff);
+                goto Menu;
+            }
+            else if (keyInfo.Key == ConsoleKey.NumPad3 || keyInfo.Key == ConsoleKey.D3)
+            {
+                authController.ChangePassword();
+                goto Menu;
+            }
+            else if (keyInfo.Key == ConsoleKey.NumPad4 || keyInfo.Key == ConsoleKey.D4)
+            {
+                authController.DeleteAccount();
+                goto Menu;
+            }
+            else if (keyInfo.Key == ConsoleKey.Escape)
+            {
+                return;
+            }
+            else
+            {
+                if (IsIncorrect)
+                {
+                    ViewHelper.ClearPreviousLine(3);
+                }
+                IsIncorrect = true;
+                ViewHelper.PrintError("Phím bấm không hợp lệ. Có thể bạn đã bấm nhầm");
+                goto ReadKey;
+            }
+        }
+        private static void NhaCungCapFeature(NCCController nCCController)
+        {
+            bool IsIncorrect = false;
+        Menu:
+            Menu.NhaCungCapMenu();
+        ReadKey:
+            ConsoleKeyInfo keyInfo = Console.ReadKey(true);
+            if (keyInfo.Key == ConsoleKey.NumPad1 || keyInfo.Key == ConsoleKey.D1)
+            {
+                nCCController.ThemNCC();
+                goto Menu;
+            }
+            else if (keyInfo.Key == ConsoleKey.NumPad2 || keyInfo.Key == ConsoleKey.D2)
+            {
+                nCCController.SuaNCC();
+                goto Menu;
+            }
+            else if (keyInfo.Key == ConsoleKey.NumPad3 || keyInfo.Key == ConsoleKey.D3)
+            {
+                nCCController.XoaNCC();
+                goto Menu;
+            }
+            else if (keyInfo.Key == ConsoleKey.NumPad4 || keyInfo.Key == ConsoleKey.D4)
+            {
+                Console.Clear();
+                ViewHelper.PrintWarning("Tìm kiếm nhà cung cấp theo mã nhà cung cấp");
+                ViewHelper.PrintWarning("Bấm ESC để quay lại");
+                try
+                {
+                    var pos_ma = ViewHelper.PrintInput("Nhập mã nhà cung cấp");
+                    var pos_end = Console.GetCursorPosition();
+                MaNCC:
+                    Console.SetCursorPosition(pos_ma.Left, pos_ma.Top);
+                    string maNCC = ViewHelper.ReadLine();
+                    if (!nCCController.Exist(maNCC))
+                    {
+                        Console.SetCursorPosition(pos_end.Left, pos_end.Top);
+                        ViewHelper.PrintError("Mã nhà cung cấp không tồn tại");
+                        Thread.Sleep(1000);
+                        ViewHelper.ClearPreviousLine(3);
+                        Console.SetCursorPosition(pos_ma.Left, pos_ma.Top);
+                        Console.Write(string.Concat(Enumerable.Repeat(" ", maNCC.Length)));
+                        goto MaNCC;
+                    }
+                    var nCC = nCCController.FindNCC(maNCC);
+                    Console.Clear();
+                    nCCController.ShowNCC(nCC);
+                    ViewHelper.PrintWarning("Bấm phím bất kỳ để trở về menu");
+                    Console.ReadKey(true);
+                    goto Menu;
+                }
+                catch (Exception)
+                {
+                    goto Menu;
+                }
+
+            }
+            else if (keyInfo.Key == ConsoleKey.NumPad5 || keyInfo.Key == ConsoleKey.D5)
+            {
+                Console.Clear();
+                ViewHelper.PrintWarning("Tìm kiếm nhà cung cấp theo tên");
+                ViewHelper.PrintWarning("Bấm ESC để quay lại");
+
+                try
+                {
+                    var pos_ten = ViewHelper.PrintInput("Nhập tên nhà cung cấp");
+                    var pos_end = Console.GetCursorPosition();
+                    Console.SetCursorPosition(pos_ten.Left, pos_ten.Top);
+                    string tenNCC = ViewHelper.ReadLine();
+                    var nCC = nCCController.FindByName(tenNCC);
+                    Console.Clear();
+                    nCCController.ShowNCC(nCC);
+                    ViewHelper.PrintWarning("Bấm phím bất kỳ để trở về menu");
+                    Console.ReadKey(true);
+                    goto Menu;
+                }
+                catch (Exception)
+                {
+                    goto Menu;
+                }
+
+            }
+            else if (keyInfo.Key == ConsoleKey.NumPad6 || keyInfo.Key == ConsoleKey.D6)
+            {
+                try
+                {
+                    Console.Clear();
+                    nCCController.ShowNCC();
+                    ViewHelper.PrintWarning("Bấm phím bất kỳ để trở về menu");
+                    Console.ReadKey(true);
+                    goto Menu;
+                }
+                catch (ExitException)
+                {
+                    goto Menu;
+                }
+
+
             }
             else if (keyInfo.Key == ConsoleKey.Escape)
             {

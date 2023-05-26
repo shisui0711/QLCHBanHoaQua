@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Text.RegularExpressions;
-using System.Threading.Tasks;
+﻿using System.Text.RegularExpressions;
 
 namespace Framework
 {
@@ -11,9 +6,7 @@ namespace Framework
     {
         public static bool Phone(string phone)
         {
-            var regex1 = new Regex(@"^0[1-9]\d{8}$");
-            var regex2 = new Regex(@"^+?84[1-9]\d{8}$");
-            if (regex1.IsMatch(phone) || regex2.IsMatch(phone)) return true;
+            if (Regex.IsMatch(phone, @"^0[1-9]\d{8}$") || Regex.IsMatch(phone, @"^+?84[1-9]\d{8}$")) return true;
             return false;
         }
         public static bool Gender(string gender)
